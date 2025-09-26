@@ -4,6 +4,7 @@ const arrayContainer = document.getElementById('array-container');
 const resetBtn = document.getElementById('reset-btn');
 const sizeSlider = document.getElementById('size-slider');
 const speedSlider = document.getElementById('speed-slider');
+const bogoSortBtn = document.getElementById('bogo-sort-btn'); // New button
 const bubbleSortBtn = document.getElementById('bubble-sort-btn');
 const insertionSortBtn = document.getElementById('insertion-sort-btn');
 const selectionSortBtn = document.getElementById('selection-sort-btn');
@@ -19,7 +20,6 @@ let isSorting = false;
 // Web Audio API setup
 let audioCtx = null;
 
-// **MODIFIED** Added a 'volume' parameter
 function playSound(value, duration = 100, volume = 0.1) {
     if (audioCtx === null) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -35,7 +35,7 @@ function playSound(value, duration = 100, volume = 0.1) {
     oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
     oscillator.type = 'triangle';
 
-    gainNode.gain.setValueAtTime(volume, audioCtx.currentTime); // Use the volume parameter
+    gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration / 1000);
 
     oscillator.connect(gainNode);
@@ -71,6 +71,7 @@ function disableControls() {
     isSorting = true;
     resetBtn.disabled = true;
     sizeSlider.disabled = true;
+    bogoSortBtn.disabled = true;
     bubbleSortBtn.disabled = true;
     insertionSortBtn.disabled = true;
     selectionSortBtn.disabled = true;
@@ -83,10 +84,10 @@ function disableControls() {
 
 async function enableControls() {
     await showCompletionAnimation();
-
     isSorting = false;
     resetBtn.disabled = false;
     sizeSlider.disabled = false;
+    bogoSortBtn.disabled = false;
     bubbleSortBtn.disabled = false;
     insertionSortBtn.disabled = false;
     selectionSortBtn.disabled = false;
@@ -101,8 +102,7 @@ async function showCompletionAnimation() {
     const bars = document.getElementsByClassName('bar');
     for (let i = 0; i < bars.length; i++) {
         bars[i].style.backgroundColor = SORTED_COLOR;
-        // Increased the volume from 0.3 to 0.7 for a much louder sound
-        playSound(array[i]); 
+        playSound(array[i]);
         await sleep(15);
     }
 }
@@ -128,6 +128,16 @@ sizeSlider.addEventListener('input', () => {
 });
 
 // Event Listeners
+bogoSortBtn.addEventListener('click', async () => {
+    if (isSorting) return;
+    if (array.length > 10 && !confirm("Bogo Sort is extremely inefficient and may not finish for arrays larger than 10. Proceed anyway?")) {
+        return; // User cancelled the sort
+    }
+    disableControls();
+    await bogoSort();
+    await enableControls();
+});
+
 bubbleSortBtn.addEventListener('click', async () => {
     if (isSorting) return;
     disableControls();
@@ -185,6 +195,39 @@ radixSortBtn.addEventListener('click', async () => {
 });
 
 // --- Sorting Algorithms ---
+
+function isSorted() {
+    for (let i = 0; i < array.length - 1; i++) {
+        if (array[i] > array[i + 1]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+async function shuffle() {
+    const bars = document.getElementsByClassName('bar');
+    let n = array.length;
+    for (let i = n - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        bars[i].style.backgroundColor = SWAP_COLOR;
+        bars[j].style.backgroundColor = SWAP_COLOR;
+        await sleep(getDelay());
+        [array[i], array[j]] = [array[j], array[i]];
+        bars[i].style.height = `${array[i]}px`;
+        bars[j].style.height = `${array[j]}px`;
+        playSound(array[i]);
+        playSound(array[j]);
+        bars[i].style.backgroundColor = PRIMARY_COLOR;
+        bars[j].style.backgroundColor = PRIMARY_COLOR;
+    }
+}
+
+async function bogoSort() {
+    while (!isSorted()) {
+        await shuffle();
+    }
+}
 
 async function bubbleSort() {
     const bars = document.getElementsByClassName('bar');
